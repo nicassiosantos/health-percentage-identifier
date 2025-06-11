@@ -9,14 +9,15 @@
 #define LIGHT_PIN 14
 #define INPUT_SIZE 4
 
-const char* ssid = "Yang";
-const char* password = "123456zzz";
+const char* ssid = "GalaxyF41";
+const char* password = "nqxy7683";
 
 // MQTT
-const char* mqtt_server = "mqtt-dashboard.com";
-const int mqtt_port = 8884;
-const char* mqtt_topic = "/sensores";
-
+const char* mqtt_server = "broker.mqtt.cool";
+const int mqtt_port = 1883;
+const char* mqtt_topic = "sensores";
+const char* mqtt_client = "user";
+const char* mqtt_password = "1234";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -39,10 +40,10 @@ float denormalize_output(float normalized) {
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid);
+  WiFi.begin(ssid, password);
 
   int tentativas = 0;
-  while (WiFi.status() != WL_CONNECTED && tentativas < 15) {
+  while (WiFi.status() != WL_CONNECTED && tentativas < 50000) {
     delay(1000);
     Serial.print(".");
     tentativas++;
@@ -69,7 +70,7 @@ void setup_wifi() {
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
-    if (client.connect("clientId-XrSzxIRdeC")) {
+    if (client.connect("web-client-01", "user", "1234")) {
       Serial.println("Conectado!");
     } else {
       Serial.print("Falhou, rc=");
@@ -82,36 +83,29 @@ void reconnect() {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(TEMPERATURE_PIN, INPUT);
-  pinMode(HUMIDITY_PIN, INPUT);
-  pinMode(GAS_PIN, INPUT);
-  pinMode(LIGHT_PIN, INPUT);
+  //pinMode(TEMPERATURE_PIN, INPUT);
+  //pinMode(HUMIDITY_PIN, INPUT);
+  //pinMode(GAS_PIN, INPUT);
+  //pinMode(LIGHT_PIN, INPUT);
 
-  setup_wifi();
+  //setup_wifi();
 
   client.setServer(mqtt_server, mqtt_port);
 }
 
 void loop() {
-  if (!wifiLigado) {
-    setup_wifi();
-  }
 
-  if (!client.connected()) {
-    reconnect();
-  }
-
-  client.loop();
-
+  
   int raw_input[INPUT_SIZE] = {
-    analogRead(TEMPERATURE_PIN),
-    analogRead(HUMIDITY_PIN),
-    analogRead(GAS_PIN),
-    analogRead(LIGHT_PIN)
+    0,//analogRead(TEMPERATURE_PIN),
+    0,//analogRead(HUMIDITY_PIN),
+    0,//analogRead(GAS_PIN),
+    0,//analogRead(LIGHT_PIN)
   };
 
   float sensor_values[INPUT_SIZE];
   map_to_sensor_range(raw_input, sensor_values);
+  
 
   float chanceVida = denormalize_output(0.82);  // valor fixo por enquanto
 
@@ -131,6 +125,16 @@ void loop() {
   payload += "\"chanceVida\":" + String(chanceVida, 2) + ",";
   payload += "\"dataHora\":\"" + String(isoDate) + "\"";
   payload += "}";
+
+  if (!wifiLigado) {
+    setup_wifi();
+  }
+
+  if (!client.connected()) {
+    reconnect();
+  }
+
+  client.loop();
 
   Serial.println("Enviando via MQTT:");
   Serial.println(payload);
